@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Grandstander:wght@500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-size: 0;
+      background: url(./images/bg.jpg);
+      font-family: "Grandstander", cursive;
+    }
+
+    #container {
+      width: 1690px;
+      height: 850px;
+      margin-top: 50px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+
+    #top {
+      width: 1690px;
+      height: 150px;
+      float: left;
+      text-align: center;
+    }
+
+    #middle {
+      clear: both;
+      width: 1690px;
+      height: 554px;
+    }
+
+    #game {
+      /* 卡片寬度：120*13=1560、margin寬度 (5*2)*13=130，總寬度=1560+130=1690 */
+      width: 1690px;
+      /* 卡片高度：120*4=480、margin寬度 (5*2)*4=40，總高度=480+40=520 */
+      height: 520px;
+      margin: auto;
+      padding-top: 17px;
+    }
+
+    #bottom {
+      width: 1690px;
+      height: 175px;
+      font-size: 24px;
+      color: rgba(130, 65, 170, 0.75);
+    }
+
+    #btn-start {
+      text-align: center;
+    }
+
+    .card {
+      width: 120px;
+      height: 120px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: all 1s;
+      /* 要讓之後產生的 n 個 div 都用 inline-block 呈現 */
+      display: inline-block;
+      margin: 5px;
+    }
+
+    /* 用 :hover 測試卡片可翻面 */
+    /* .card:hover {
+        transform: rotateY(180deg);
+      } */
+    .close {
+      /* 02-翻牌-再把卡片翻回來，使其背面朝上，正面朝下 */
+      transform: rotateY(180deg);
+    }
+
+    .front {
+      width: 100%;
+      height: 100%;
+      /* 背景刪掉，之後用js跑迴圈調整花色 */
+      /* background: url("./images/1p.jpg") */
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+      /* 設定定位使其前後重疊 */
+      position: absolute;
+      border-radius: 10px;
+    }
+
+    .back {
+      width: 100%;
+      height: 100%;
+      background: url("./images/card_back.jpg");
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+      /* 設定定位使其前後重疊 */
+      position: absolute;
+      /* 01-翻牌-先把背面的卡片翻轉到後面，使卡片重疊時兩張都有圖片*/
+      transform: rotateY(180deg);
+      border-radius: 10px;
+      box-shadow: 2px 2px 5px rgba(130, 65, 170, 0.6);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 確認卡片可以運作後，留著備用 -->
+  <!-- <div class="card">
+      <div class="front"></div>
+      <div class="back"></div>
+    </div> -->
+
+  <div id="container">
+    <div id="top">
+      <div class="animate__animated animate__heartBeat">
+        <img src="./images/card_title.png" height="160px" />
+      </div>
+    </div>
+
+    <!-- <div id="timer">time: <span id="text-time">0</span></div> -->
+    <!-- 建立遊戲區域 -->
+    <div id="middle">
+      <div id="game"></div>
+    </div>
+    <div id="bottom">
+      <table width="100%" height="100%">
+        <tr>
+          <td colspan="5" height="100px" align="center">
+            <input type="image" src="./images/start.png" id="btn-start" />
+          </td>
+        </tr>
+        <tr>
+          <td width="320px" valign="middle" id="text-name">　　guest</td>
+          <td width="320px" valign="middle" id="time">　　time : <span id="text-time">0</span></td>
+          <td width="410px"></td>
+          <td width="320px" valign="middle">　　Top 1 : <span id="text-highplayer"> - </span></td>
+          <td width="320px" valign="middle">　　Total time : <span id="text-hightime"> 0 </span> s</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <script src="./jquery-3.5.1.min.js"></script>
+  <script src="./sweetalert2@10.js"></script>
+  <script>
+    // let player = prompt("Please enter your name :");
+    // alert(`${player}, let's start learning ABC.`);
+
+    // 於下方顯示玩家姓名
+    // textName = document.getElementById("text-name");
+    // textName.innerText = "　　player : "+ player;  
+
+    // 設定時間
+    let timing = 0;
+    // 一開始進入頁面的遊戲狀態
+    let isInGame = false;
+
+    const textName = document.getElementById("text-name");
+    const textTime = document.getElementById('text-time')
+    const textHighplayer = document.getElementById("text-highplayer");
+    const textHightime = document.getElementById("text-hightime");
+
+    // 設定最高分玩家
+    let high = {
+          player: '',
+          timing: 0
+        }
+
+    // codepen-sweetalert    
+    
+    Swal.mixin({
+      input: 'text',
+      confirmButtonText: 'Enter',
+    })
+      .queue([
+        {
+          title: "Please enter your name :",
+        },
+      ])
+       .then((result) => {
+        if (result.value) {
+          player = result.value
+      
+          // 於下方顯示玩家姓名
+          textName.innerText = "　　player : " + player;
+          
+          Swal.fire({
+            title: `${player}, let's start learning ABC.`,
+
+            confirmButtonText: 'Fighting!'
+          })
+        }
+        console.log(high)
+      })
+      
+    // localStorage：
+    // 可以跨瀏覽器分頁做使用、使用者關掉分頁或瀏覽器再打開資料仍不會消失，
+    // 且資料無期效限制，資料將永久被保留。
+    var highScore = JSON.parse(localStorage.getItem(high))
+
+    if (highScore !== null) {
+      high = highScore;
+      textHighplayer.innerText = high.player;
+      textHightime.innerText = high.timing;
+    }
+
+    // 設定卡片總數
+    const totalCards = 52;
+    // 產生卡片
+    function add() {
+      // 用 jq 產生卡片
+      for (let i = 1; i <= totalCards / 2; i++) {
+        // 先把 close 拿掉
+        $("#game").append(`
+            <div class="card close">
+              <div class="back"></div>
+              <div class="front"></div>
+            </div>
+            <div class="card close">
+                <div class="back"></div>
+                <div class="front"></div>
+            </div>
+          `);
+        // 卡片的值為 1-52，52 才能整除
+        const group1 = i;
+        // 加入放置於 .front 的字母卡
+        $(".card")
+          .eq(i - 1)
+          .find(".front")
+          .css("background-image", `url(./images/${group1}t.jpg)`);
+        $(".card")
+          // .eq(值從 0 開始)
+          .eq(i - 1)
+          .attr("data-card", group1);
+      }
+
+      for (let i = 1; i <= totalCards / 2; i++) {
+        const group2 = i;
+        // 加入放置於 .front 的單字卡
+        $(".card")
+          // .eq(值從 0 開始)
+          .eq(i + 25)
+          .find(".front")
+          .css("background-image", `url(./images/${group2}p.jpg)`);
+        $(".card")
+          .eq(i + 25)
+          .attr("data-card", group2);
+      }
+
+      // 隨機打亂花色
+      for (let i = 1; i < totalCards; i++) {
+        const rand = Math.floor(Math.random() * totalCards);
+        // insertAfter() 方法在被選元素後插入 HTML 標籤或已有的元素。
+        // 語法 : $(content).insertAfter(selector)
+        // 如果用於已有元素，這些元素會被從當前位置移走，然後被添加到被選元素之後。
+        $(".card").eq(rand).insertAfter($(".card").eq(i));
+      }
+    }
+    add();
+
+    $("#btn-start").click(function () {
+      // 點擊開始按鈕後，停用開始按鈕
+      $(this).attr("disabled", true);
+      $("#btn-start").attr('src', './images/start-n.png')
+      isInGame = true;
+
+      // 重置分數
+      score = 0;
+      $("#text-Score").text(score);
+      // 重置時間
+      timing = 0;
+      $("#text-time").text(timing);
+
+      // 於下方顯示時間
+      let timer = setInterval(function () {
+        // 每秒時間往上加
+        timing++;
+        $("#text-time").text(timing + " s");
+      }, 1000);
+
+      //---
+
+      $("#game").on("click", ".card", function () {
+        // 如果被翻開的卡片張數 > 2，則卡片可被翻開，反之，則不行。
+        if ($(".card:not(.close)").length < 2) {
+          $(this).removeClass("close");
+        }
+
+        const dataCard = document.getElementById('data-card')
+
+        // 如果被翻開的卡片張數 = 2，
+        // 則去判斷 (卡片相同 => fadeTo )、 (卡片不相同 => 翻回去 )
+        if ($(".card:not(.close)").length == 2) {
+          // 如果卡片第一張 .eq(0) 的值 .attr('data-card') 等於卡片第二張 .eq(1) 的值 .attr('data-card')
+          if ($(".card:not(.close)").eq(0).attr("data-card") == $(".card:not(.close)").eq(1).attr("data-card")) {
+            // 相同的話，卡片指定秒數後淡出到 0，並加上 clear 的 class
+            $(".card:not(.close)").fadeTo(500, 0).addClass("clear");
+
+            // 抓到配對卡片的號碼
+            console.log($(".card:not(.close)").eq(0).data('card'))
+            let a = ($(".card:not(.close)").eq(0).data('card'))
+            console.log(`audio${a}`)
+
+            // 播放卡片音效
+            const audio = new Audio();
+            audio.src = `./audio/audio${a}.mp3`
+            audio.play()
+          }
+          // 不同的話，卡片指定秒數後翻回去
+          setTimeout(function () {
+            $(".card:not(.close)").addClass("close");
+          }, 800);
+        }
+
+        // 等 fadeTo 一秒動畫跑完後，再顯示出過關
+        if ($(".clear").length == totalCards) {
+          setTimeout(function () {
+            // alert("Congratulations!　" + `${player}` + "!　You are done.");
+            Swal.fire('Congratulations!\n \nYou are done.')
+          }, 1000);
+
+          // 當卡片清空時，遊戲結束，按鈕恢復
+          clearInterval(timer);
+          $("#btn-start").attr("disabled", false);
+          isInGame = false;
+          setTimeout(function () {
+            $("#btn-start").attr('src', './images/start.png')
+          }, 5000);
+
+          if (highScore === null || high.timing > timing) {
+            high.timing = timing;
+            high.player = player || 'guest';
+
+            localStorage.setItem(high, JSON.stringify(high))
+            textHighplayer.innerText = high.player;
+            textHightime.innerText = high.timing;
+          }
+        }
+      })
+    });
+    console.log(high)
+    // if ($(".clear").length == totalCards) {
+    //   $("#game").empty();
+    // }
+    // add();
+
+  </script>
+</body>
+
+</html>
